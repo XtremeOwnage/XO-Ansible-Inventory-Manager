@@ -1,0 +1,6 @@
+ansible_host: 10.100.4.11
+app: proxmox
+type: bare-metal
+cores: 16
+labels:
+  - storage

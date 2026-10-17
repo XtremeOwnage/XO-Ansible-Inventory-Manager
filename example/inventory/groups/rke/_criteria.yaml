@@ -1,0 +1,2 @@
+# Criteria for a group defined as a folder. Only host_criteria and enabled are read here.
+host_criteria: app = rke OR labels CONTAINS kubernetes

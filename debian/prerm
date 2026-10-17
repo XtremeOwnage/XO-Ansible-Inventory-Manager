@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+# Python may have written bytecode caches next to the modules; remove them so
+# the package directory can be removed cleanly.
+if [ "$1" = "remove" ] || [ "$1" = "upgrade" ] || [ "$1" = "deconfigure" ]; then
+    rm -rf /usr/lib/xo-ansible-inventory-manager/xo_inventory/__pycache__ \
+           /usr/lib/xo-ansible-inventory-manager/xo_inventory/criteria/__pycache__
+fi
+
+#DEBHELPER#
+
+exit 0

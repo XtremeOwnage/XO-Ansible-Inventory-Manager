@@ -1,0 +1,3 @@
+# Hosts defined inside a group folder are members of that group.
+ansible_host: 10.100.5.10
+type: vm

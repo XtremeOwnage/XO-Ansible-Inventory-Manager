@@ -1,0 +1,29 @@
+Source: xo-ansible-inventory-manager
+Section: admin
+Priority: optional
+Maintainer: XtremeOwnage <admin@xtremeownage.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+Homepage: https://github.com/XtremeOwnage/XO-Ansible-Inventory-Manager
+Vcs-Browser: https://github.com/XtremeOwnage/XO-Ansible-Inventory-Manager
+Vcs-Git: https://github.com/XtremeOwnage/XO-Ansible-Inventory-Manager.git
+
+Package: xo-ansible-inventory-manager
+Architecture: all
+Depends: ${misc:Depends}, python3 (>= 3.9), python3-yaml
+Recommends: ansible-core | ansible
+Description: Dynamic Ansible inventory built from a folder of YAML files
+ An Ansible inventory script that builds the inventory from a tree of YAML
+ files: one file (or folder) per host, one file (or folder) per group, and
+ shared variable files.
+ .
+ Features:
+  - Groups defined by files or nested folders, with child groups
+  - host_criteria expressions that add hosts to groups automatically
+    (e.g. "app = proxmox AND cores >= 16")
+  - enabled: false to switch hosts or groups off without deleting them
+  - Optional cache that is invalidated whenever the inventory changes
+ .
+ Configure /etc/ansible/xo_inventory.yaml, then point Ansible at
+ /usr/bin/ansible-xo-inventory.py.

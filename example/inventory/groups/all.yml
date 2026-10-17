@@ -1,0 +1,2 @@
+# Variables for the "all" group, i.e. every host.
+ansible_python_interpreter: /usr/bin/python3

@@ -1,0 +1,3 @@
+# A disabled group is left out, along with anything defined inside its folder.
+enabled: false
+host_criteria: type = vm

@@ -1,0 +1,4 @@
+# Files in vars/ are merged into the "all" group. Split them however you like.
+dns_servers:
+  - 10.100.4.1
+  - 1.1.1.1

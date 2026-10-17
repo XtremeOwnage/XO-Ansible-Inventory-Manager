@@ -1,0 +1,87 @@
+# XO Ansible Inventory Manager configuration.
+#
+# Only main.STORAGE_LOCATION is required. Every other setting below is shown with
+# its default value, so you can delete anything you don't change.
+#
+# The config file is looked for in this order:
+#   1. --config <path>
+#   2. $XO_INVENTORY_CONFIG
+#   3. ./xo_inventory.yaml                         (the directory you run ansible from)
+#   4. ~/.config/xo-inventory/xo_inventory.yaml
+#   5. /etc/ansible/xo_inventory.yaml
+
+main:
+  # Folder containing hosts/, groups/ and vars/.
+  # A relative path is relative to this config file, so in /etc/ansible/xo_inventory.yaml
+  # "inventory" means /etc/ansible/inventory.
+  STORAGE_LOCATION: inventory
+
+logging:
+  # DEBUG, INFO, WARNING, ERROR or CRITICAL. Log output goes to stderr; stdout is reserved for Ansible.
+  MIN_LOG_LEVEL: WARNING
+
+  # Python logging format: https://docs.python.org/3/library/logging.html#logrecord-attributes
+  LOG_FORMAT: '%(asctime)s %(levelname)s %(module)s.%(funcName)s: %(message)s'
+  LOG_TIMESTAMP_FORMAT: '%Y-%m-%dT%H:%M:%S'
+
+  # Also write the log to a file. If the file can't be opened, a warning is printed and the
+  # inventory still works.
+  ENABLE_FILE_LOGGING: false
+  # LOG_FILE_PATH: ~/.local/state/xo-inventory/inventory.log
+  ENABLE_LOG_ROTATION: true
+  LOG_FILE_MAX_SIZE: 10485760  # 10 MB
+  LOG_FILE_BACKUP_COUNT: 3
+
+directories:
+  # Folder (under STORAGE_LOCATION) with one YAML file, or one folder of YAML files, per host.
+  HOST_VARS_FOLDER: hosts
+
+  # Folder with one YAML file and/or folder per group. Group folders can contain
+  # hosts/, vars/ and groups/ (child groups) using the same names as configured here.
+  GROUP_VARS_FOLDER: groups
+
+  # Folder of variable files merged into the "all" group. Inside a group folder,
+  # the same name holds that group's variable files.
+  VARS_FOLDER: vars
+
+  LOADER_YAML_EXTENSIONS: ['.yaml', '.yml']
+
+special-keys:
+  # Variable holding the criteria expression that adds hosts to a group automatically.
+  # See docs/expression-syntax.md.
+  HOST_CRITERIA_VAR: host_criteria
+
+  # Set this variable to false in a host or group file to leave it out of the inventory.
+  KEY_ENABLED: enabled
+
+  # File inside a group folder holding that group's host_criteria / enabled.
+  GROUP_CRITERIA_FILE: _criteria.yaml
+
+features:
+  # List every host directly under the "all" group.
+  ADD_ALL_HOSTS_TO_ALL_GROUP: true
+
+  # Give every host the variables from hosts/all.yaml, unless the host sets them itself.
+  MERGE_HOST_ALL_VARS: true
+
+  # Evaluate host_criteria. Turning this off only leaves static (folder-based) membership.
+  EVALUATE_GROUP_CRITERIA: true
+
+sorting:
+  # Cosmetic only: Ansible does not care about order. SORT_ENABLED turns all of these off.
+  SORT_ENABLED: true
+  SORT_GROUP_KEYS: true
+  SORT_HOSTVAR_KEYS: true
+  SORT_HOSTVAR_VARS: true
+  SORT_GROUP_VARS: true
+  SORT_GROUP_HOSTS: true
+  SORT_GROUP_CHILDREN: true
+
+cache:
+  # Cache the built inventory. The cache is rebuilt automatically whenever any file under
+  # STORAGE_LOCATION or this config file changes. Building is fast, so most people won't need this.
+  CACHE_ENABLED: false
+
+  # Defaults to ~/.cache/xo-inventory/inventory.json. The file is created with 0600
+  # permissions and ignored unless it is owned by you and not writable by anyone else.
+  # CACHE_LOCATION: ~/.cache/xo-inventory/inventory.json

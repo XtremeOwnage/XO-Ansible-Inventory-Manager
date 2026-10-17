@@ -94,9 +94,9 @@ jobs:
 
       - name: Both packages contain the same files
         run: |
-          # Files and symlinks only: rpm does not list directories it does not own.
+          # Compare files and symlinks only (directory entries differ by design).
           dpkg-deb --fsys-tarfile dist/*.deb | tar -tv | grep -v '^d' | awk '{print $6}' | sed 's#^\./#/#' | grep -E '^/(usr/lib|usr/bin|etc)/' | sort > deb.txt
-          rpm -qlp dist/*.rpm | grep -E '^/(usr/lib|usr/bin|etc)/' | sort > rpm.txt
+          rpm -qp --qf '[%{FILEMODES:perms} %{FILENAMES}\n]' dist/*.rpm | grep -v '^d' | awk '{print $2}' | grep -E '^/(usr/lib|usr/bin|etc)/' | sort > rpm.txt
           diff -u deb.txt rpm.txt
 
       - uses: actions/upload-artifact@v7

@@ -14,8 +14,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install ruff
@@ -28,8 +28,8 @@ jobs:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
@@ -39,30 +39,63 @@ jobs:
       - name: Run tests
         run: pytest -v
 
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Strict mode: broken links, broken anchors and orphan pages fail the build.
+      - name: Build documentation site
+        uses: XtremeOwnage/Netdocs@v1.5.4
+        with:
+          version: "1.5.4"
+          config: netdocs.json
+          args: --strict --clean
+      - uses: actions/upload-artifact@v7
+        with:
+          name: docs-site
+          path: _site
+          if-no-files-found: error
+
   package:
     runs-on: ubuntu-latest
     needs: [lint, test]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential debhelper dpkg-dev
+          sudo apt-get install -y --no-install-recommends build-essential debhelper dpkg-dev rpm
+          curl -sSfL "https://github.com/goreleaser/nfpm/releases/download/v2.48.0/nfpm_2.48.0_Linux_x86_64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin nfpm
+          nfpm --version
 
       - name: Build .deb
         run: |
           dpkg-buildpackage -us -uc -b
           mkdir -p dist
           mv ../xo-ansible-inventory-manager_*_all.deb dist/
-          ls -l dist
           dpkg-deb --info dist/*.deb
           dpkg-deb --contents dist/*.deb
 
-      - uses: actions/upload-artifact@v4
+      - name: Build .rpm
+        run: |
+          export VERSION=$(python3 -c 'import sys; sys.path.insert(0, "src"); import xo_inventory; print(xo_inventory.__version__)')
+          nfpm package -f packaging/nfpm.yaml -p rpm -t dist/
+          rpm -qip dist/*.rpm
+          rpm -qlpv dist/*.rpm
+          rpm -qp --requires dist/*.rpm
+
+      - name: Both packages contain the same files
+        run: |
+          dpkg-deb --fsys-tarfile dist/*.deb | tar -t | sed 's#^\./#/#; s#/$##' | grep -E '^/(usr/lib|usr/bin|etc)/' | sort > deb.txt
+          rpm -qlp dist/*.rpm | grep -E '^/(usr/lib|usr/bin|etc)/' | sort > rpm.txt
+          diff -u deb.txt rpm.txt
+
+      - uses: actions/upload-artifact@v7
         with:
-          name: deb
-          path: dist/*.deb
+          name: packages
+          path: dist/*
           if-no-files-found: error
 
   install-test:
@@ -71,19 +104,37 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: ["debian:bullseye", "debian:bookworm", "debian:trixie", "ubuntu:22.04", "ubuntu:24.04"]
+        include:
+          - { image: "debian:bullseye", format: deb }
+          - { image: "debian:bookworm", format: deb }
+          - { image: "debian:trixie", format: deb }
+          - { image: "ubuntu:22.04", format: deb }
+          - { image: "ubuntu:24.04", format: deb }
+          - { image: "fedora:latest", format: rpm }
+          - { image: "almalinux:9", format: rpm }
+          - { image: "almalinux:10", format: rpm }
     container: ${{ matrix.image }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
-          name: deb
+          name: packages
           path: dist
 
-      - name: Install package
+      - name: Install package (deb)
+        if: matrix.format == 'deb'
         run: |
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ./dist/*.deb
+
+      - name: Install package (rpm)
+        if: matrix.format == 'rpm'
+        run: |
+          dnf install -y ./dist/*.rpm
+          rpm -V xo-ansible-inventory-manager
+
+      - name: Installed files
+        run: |
           test -L /usr/bin/ansible-xo-inventory.py
           test -f /etc/ansible/xo_inventory.yaml
           ansible-xo-inventory.py --version
@@ -104,7 +155,8 @@ jobs:
         run: |
           if ansible-xo-inventory.py --list --config /nonexistent.yaml; then exit 1; fi
 
-      - name: Remove and purge cleanly
+      - name: Remove cleanly (deb)
+        if: matrix.format == 'deb'
         run: |
           apt-get remove -y xo-ansible-inventory-manager
           test ! -e /usr/bin/ansible-xo-inventory.py
@@ -112,3 +164,11 @@ jobs:
           test -f /etc/ansible/xo_inventory.yaml   # conffile kept until purge
           apt-get purge -y xo-ansible-inventory-manager
           test ! -e /etc/ansible/xo_inventory.yaml
+
+      - name: Remove cleanly (rpm)
+        if: matrix.format == 'rpm'
+        run: |
+          dnf remove -y xo-ansible-inventory-manager
+          test ! -e /usr/bin/ansible-xo-inventory.py
+          test ! -e /usr/lib/xo-ansible-inventory-manager
+          test ! -e /etc/ansible/xo_inventory.yaml   # unmodified config is removed

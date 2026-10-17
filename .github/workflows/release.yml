@@ -18,7 +18,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check tag matches the version
         run: |
@@ -29,10 +29,16 @@ jobs:
           test "$tag" = "$code" || { echo "::error::Tag $GITHUB_REF_NAME does not match xo_inventory.__version__ ($code)"; exit 1; }
           test "$tag" = "$deb" || { echo "::error::Tag $GITHUB_REF_NAME does not match debian/changelog ($deb)"; exit 1; }
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
-          name: deb
+          name: packages
           path: dist
+
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum *.deb *.rpm > SHA256SUMS
+          cat SHA256SUMS
 
       - name: Extract release notes
         run: |
@@ -45,9 +51,12 @@ jobs:
           cat notes.md
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: ${{ github.ref_name }}
           body_path: notes.md
-          files: dist/*.deb
+          files: |
+            dist/*.deb
+            dist/*.rpm
+            dist/SHA256SUMS
           fail_on_unmatched_files: true

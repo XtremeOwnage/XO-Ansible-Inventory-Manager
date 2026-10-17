@@ -1,0 +1,56 @@
+# RPM package definition, built with nfpm (https://nfpm.goreleaser.com/):
+#   VERSION=1.0.0 nfpm package -f packaging/nfpm.yaml -p rpm -t dist/
+# The .deb is built from debian/ with dpkg-buildpackage; keep the file layout in sync.
+name: xo-ansible-inventory-manager
+arch: all
+platform: linux
+version: ${VERSION}
+release: 1
+section: admin
+priority: optional
+maintainer: XtremeOwnage <admin@xtremeownage.com>
+vendor: XtremeOwnage
+homepage: https://github.com/XtremeOwnage/XO-Ansible-Inventory-Manager
+license: GPL-3.0-or-later
+description: |
+  Dynamic Ansible inventory built from a folder of YAML files.
+  One file or folder per host, one file or folder per group, nested child
+  groups, and host_criteria expressions that add hosts to groups automatically.
+
+depends:
+  - python3 >= 3.9
+  - python3-pyyaml
+recommends:
+  - ansible-core
+
+contents:
+  - src: ./src/xo_inventory
+    dst: /usr/lib/xo-ansible-inventory-manager/xo_inventory
+  - src: ./src/ansible-xo-inventory.py
+    dst: /usr/lib/xo-ansible-inventory-manager/ansible-xo-inventory.py
+    file_info:
+      mode: 0755
+  - src: /usr/lib/xo-ansible-inventory-manager/ansible-xo-inventory.py
+    dst: /usr/bin/ansible-xo-inventory.py
+    type: symlink
+  - src: ./example/xo_inventory.yaml
+    dst: /etc/ansible/xo_inventory.yaml
+    type: config|noreplace
+  - src: ./README.md
+    dst: /usr/share/doc/xo-ansible-inventory-manager/README.md
+  - src: ./CHANGELOG.md
+    dst: /usr/share/doc/xo-ansible-inventory-manager/CHANGELOG.md
+  - src: ./docs
+    dst: /usr/share/doc/xo-ansible-inventory-manager/docs
+  - src: ./example/inventory
+    dst: /usr/share/doc/xo-ansible-inventory-manager/examples/inventory
+  - src: ./example/ansible.cfg
+    dst: /usr/share/doc/xo-ansible-inventory-manager/examples/ansible.cfg
+  - src: ./LICENSE
+    dst: /usr/share/licenses/xo-ansible-inventory-manager/LICENSE
+    type: license
+
+scripts:
+  # Python may write bytecode caches next to the modules; remove them so the
+  # package directory can be removed cleanly.
+  preremove: ./packaging/preremove.sh

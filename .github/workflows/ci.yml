@@ -77,18 +77,23 @@ jobs:
           mv ../xo-ansible-inventory-manager_*_all.deb dist/
           dpkg-deb --info dist/*.deb
           dpkg-deb --contents dist/*.deb
+          if dpkg-deb --contents dist/*.deb | grep -E '__pycache__|\.pyc$'; then echo "::error::bytecode in deb"; exit 1; fi
 
       - name: Build .rpm
         run: |
-          export VERSION=$(python3 -c 'import sys; sys.path.insert(0, "src"); import xo_inventory; print(xo_inventory.__version__)')
+          export VERSION=$(python3 -B -c 'import sys; sys.path.insert(0, "src"); import xo_inventory; print(xo_inventory.__version__)')
+          # Never package bytecode caches.
+          find src -type d -name __pycache__ -prune -exec rm -rf {} +
           nfpm package -f packaging/nfpm.yaml -p rpm -t dist/
+          if rpm -qlp dist/*.rpm | grep -E '__pycache__|\.pyc$'; then echo "::error::bytecode in rpm"; exit 1; fi
           rpm -qip dist/*.rpm
           rpm -qlpv dist/*.rpm
           rpm -qp --requires dist/*.rpm
 
       - name: Both packages contain the same files
         run: |
-          dpkg-deb --fsys-tarfile dist/*.deb | tar -t | sed 's#^\./#/#; s#/$##' | grep -E '^/(usr/lib|usr/bin|etc)/' | sort > deb.txt
+          # Files and symlinks only: rpm does not list directories it does not own.
+          dpkg-deb --fsys-tarfile dist/*.deb | tar -tv | grep -v '^d' | awk '{print $6}' | sed 's#^\./#/#' | grep -E '^/(usr/lib|usr/bin|etc)/' | sort > deb.txt
           rpm -qlp dist/*.rpm | grep -E '^/(usr/lib|usr/bin|etc)/' | sort > rpm.txt
           diff -u deb.txt rpm.txt
 

@@ -23,7 +23,7 @@ jobs:
       - name: Check tag matches the version
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          code=$(python3 -c 'import sys; sys.path.insert(0, "src"); import xo_inventory; print(xo_inventory.__version__)')
+          code=$(python3 -B -c 'import sys; sys.path.insert(0, "src"); import xo_inventory; print(xo_inventory.__version__)')
           deb=$(dpkg-parsechangelog -S Version)
           echo "tag=$tag code=$code debian=$deb"
           test "$tag" = "$code" || { echo "::error::Tag $GITHUB_REF_NAME does not match xo_inventory.__version__ ($code)"; exit 1; }

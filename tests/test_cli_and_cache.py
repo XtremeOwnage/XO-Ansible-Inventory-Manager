@@ -209,3 +209,28 @@ def test_ansible_inventory_reads_the_example(tmp_path):
 
 
 # endregion
+
+
+@pytest.mark.skipif(shutil.which("ansible-playbook") is None, reason="ansible-core not installed")
+def test_vault_values_are_decrypted_by_ansible(tmp_path):
+    password_file = tmp_path / "pw"
+    password_file.write_text("testpass\n")
+    encrypted = subprocess.run(
+        ["ansible-vault", "encrypt_string", "--vault-password-file", str(password_file), "s3cret", "--name", "db_password"],
+        capture_output=True, text=True, stdin=subprocess.DEVNULL, check=True,
+    ).stdout
+    (tmp_path / "inventory" / "hosts").mkdir(parents=True)
+    (tmp_path / "inventory" / "hosts" / "web-01.yaml").write_text(encrypted + "template: !unsafe '{{ not_templated }}'\n")
+    config = write_config(tmp_path / "xo_inventory.yaml", tmp_path / "inventory")
+    playbook = tmp_path / "pb.yml"
+    playbook.write_text(
+        "- hosts: all\n  gather_facts: false\n  tasks:\n    - debug:\n        msg: 'VALUE={{ db_password }} {{ template }}'\n"
+    )
+
+    env = {**os.environ, "XO_INVENTORY_CONFIG": str(config), "ANSIBLE_LOCAL_TEMP": str(tmp_path)}
+    result = subprocess.run(
+        ["ansible-playbook", "-i", str(LAUNCHER), str(playbook), "-c", "local", "--vault-password-file", str(password_file)],
+        capture_output=True, text=True, env=env, stdin=subprocess.DEVNULL, check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "VALUE=s3cret {{ not_templated }}" in result.stdout

@@ -37,6 +37,29 @@ class InventoryError(Exception):
     """Raised when the inventory folder contains something that cannot be loaded."""
 
 
+class _InventoryYamlLoader(yaml.SafeLoader):
+    """
+    SafeLoader that understands Ansible's `!vault` and `!unsafe` tags.
+
+    Tagged values are passed to Ansible in the JSON form its inventory script
+    decoder understands ({"__ansible_vault": ...} / {"__ansible_unsafe": ...}),
+    so vault-encrypted variables are decrypted by Ansible as usual.
+    """
+
+
+def _tagged(key: str):
+    def construct(loader: yaml.SafeLoader, node: yaml.Node) -> dict:
+        if not isinstance(node, yaml.ScalarNode):
+            raise yaml.constructor.ConstructorError(None, None, f"{node.tag} must be applied to a string", node.start_mark)
+        return {key: loader.construct_scalar(node)}
+
+    return construct
+
+
+_InventoryYamlLoader.add_constructor("!vault", _tagged("__ansible_vault"))
+_InventoryYamlLoader.add_constructor("!unsafe", _tagged("__ansible_unsafe"))
+
+
 @dataclass
 class Host:
     name: str
@@ -94,7 +117,7 @@ class InventoryLoader:
         """Load a YAML file that must contain a mapping (an empty file is an empty mapping)."""
         try:
             with open(path, encoding="utf-8") as handle:
-                data = yaml.safe_load(handle)
+                data = yaml.load(handle, Loader=_InventoryYamlLoader)  # noqa: S506 - SafeLoader subclass
         except yaml.YAMLError as exc:
             raise InventoryError(f"{path}: invalid YAML: {exc}") from None
         except OSError as exc:

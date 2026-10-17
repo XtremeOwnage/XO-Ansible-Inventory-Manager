@@ -154,6 +154,39 @@ def test_criteria_list_means_any(inventory_dir, make_config):
     assert inv["g"]["hosts"] == ["a", "b"]
 
 
+def test_criteria_can_use_inventory_hostname(inventory_dir, make_config):
+    inv = build(
+        inventory_dir,
+        make_config,
+        {
+            "hosts/web-01.yaml": "",
+            "hosts/web-02.yaml": "",
+            "hosts/db-01.yaml": "",
+            "groups/web.yaml": "host_criteria: inventory_hostname LIKE 'web-*'",
+        },
+    )
+    assert inv["web"] == {"hosts": ["web-01", "web-02"]}
+    assert "inventory_hostname" not in inv["_meta"]["hostvars"]["web-01"]
+
+
+def test_vault_and_unsafe_tags(inventory_dir, make_config):
+    inv = build(
+        inventory_dir,
+        make_config,
+        {"hosts/a.yaml": "secret: !vault |\n  $ANSIBLE_VAULT;1.1;AES256\n  6162\nraw: !unsafe '{{ x }}'\nsecret_set: true"},
+    )
+    assert inv["_meta"]["hostvars"]["a"] == {
+        "raw": {"__ansible_unsafe": "{{ x }}"},
+        "secret": {"__ansible_vault": "$ANSIBLE_VAULT;1.1;AES256\n6162\n"},
+        "secret_set": True,
+    }
+
+
+def test_vault_tag_on_a_mapping_is_an_error(inventory_dir, make_config):
+    with pytest.raises(InventoryError, match="must be applied to a string"):
+        build(inventory_dir, make_config, {"hosts/a.yaml": "x: !vault {a: 1}"})
+
+
 def test_criteria_can_be_turned_off(inventory_dir, make_config):
     inv = build(
         inventory_dir, make_config, {"hosts/a.yaml": "x: 1", "groups/g.yaml": "host_criteria: x = 1"},

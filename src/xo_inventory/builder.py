@@ -71,11 +71,13 @@ def build_from_data(data: InventoryData, config: Config) -> dict:
 
     # Dynamic membership
     if config.evaluate_group_criteria:
+        # Criteria can also use the host's name, as in Ansible, unless the host sets that variable itself.
+        criteria_vars = {name: {"inventory_hostname": name, **host_vars} for name, host_vars in hostvars.items()}
         for name, group in groups.items():
             if group.criteria is None:
                 continue
             already = set(members[name])
-            for host_name, host_vars in hostvars.items():
+            for host_name, host_vars in criteria_vars.items():
                 if host_name not in already and group.criteria.matches(host_vars):
                     members[name].append(host_name)
                     already.add(host_name)

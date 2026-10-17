@@ -1,11 +1,11 @@
-"""Keeps docs/expression-syntax.md in sync with the operator definitions."""
+"""Keeps docs/guide/criteria.md in sync with the operator definitions."""
 
 import re
 from pathlib import Path
 
 from xo_inventory.criteria import definitions as d
 
-DOC = Path(__file__).resolve().parent.parent / "docs" / "expression-syntax.md"
+DOC = Path(__file__).resolve().parent.parent / "docs" / "guide" / "criteria.md"
 
 
 def _reference_rows() -> list[list[str]]:
@@ -56,3 +56,25 @@ def test_negated_shorthands_match_definitions():
     }
     expected = {shorthand: first_spelling[op] for shorthand, op in d.NEGATED_OPERATORS.items()}
     assert documented == expected
+
+
+def test_readme_links_to_repository_files_exist():
+    readme = DOC.parent.parent.parent / "README.md"
+    root = readme.parent
+    targets = re.findall(r"\]\(([^)\s]+)\)", readme.read_text())
+    local = [t.split("#")[0] for t in targets if not t.startswith(("http://", "https://", "#", "mailto:"))]
+    assert local, "expected some relative links"
+    missing = [t for t in local if not (root / t).exists()]
+    assert missing == []
+
+
+def test_readme_links_to_site_pages_exist():
+    readme = DOC.parent.parent.parent / "README.md"
+    site = "https://xtremeownage.github.io/XO-Ansible-Inventory-Manager/"
+    docs = DOC.parent.parent
+    pages = re.findall(re.escape(site) + r"([^)\s>]*)", readme.read_text())
+    assert pages
+    for page in pages:
+        page = page.rstrip("/")
+        candidates = [docs / "index.md"] if not page else [docs / f"{page}.md", docs / page / "index.md"]
+        assert any(c.exists() for c in candidates), page

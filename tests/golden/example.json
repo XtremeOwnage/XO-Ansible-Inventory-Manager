@@ -1,0 +1,120 @@
+{
+    "all": {
+        "children": [
+            "big_iron",
+            "proxmox_servers",
+            "rke",
+            "ungrouped"
+        ],
+        "hosts": [
+            "docker-01",
+            "nas.example.com",
+            "pve-01",
+            "pve-02",
+            "rke-cp-01",
+            "rke-worker-01"
+        ],
+        "vars": {
+            "ansible_python_interpreter": "/usr/bin/python3",
+            "dns_servers": [
+                "10.100.4.1",
+                "1.1.1.1"
+            ],
+            "timezone": "America/Chicago"
+        }
+    },
+    "big_iron": {
+        "hosts": [
+            "pve-01",
+            "pve-02"
+        ]
+    },
+    "proxmox_servers": {
+        "hosts": [
+            "pve-01",
+            "pve-02"
+        ],
+        "vars": {
+            "ansible_connection": "ssh",
+            "ansible_port": 22
+        }
+    },
+    "rke": {
+        "hosts": [
+            "rke-cp-01"
+        ],
+        "vars": {
+            "rke_cluster_cidr": "10.42.0.0/16",
+            "rke_cluster_name": "homelab",
+            "rke_version": "v1.30.4"
+        },
+        "children": [
+            "rke_control_plane",
+            "rke_workers"
+        ]
+    },
+    "rke_control_plane": {
+        "vars": {
+            "rke_etcd": true
+        }
+    },
+    "rke_workers": {
+        "hosts": [
+            "rke-worker-01"
+        ]
+    },
+    "ungrouped": {
+        "hosts": [
+            "docker-01",
+            "nas.example.com"
+        ]
+    },
+    "_meta": {
+        "hostvars": {
+            "docker-01": {
+                "ansible_host": "10.100.4.50",
+                "ansible_user": "ansible",
+                "app": "docker",
+                "cores": 4,
+                "type": "vm"
+            },
+            "nas.example.com": {
+                "ansible_host": "10.100.4.5",
+                "ansible_user": "ansible",
+                "type": "bare-metal"
+            },
+            "pve-01": {
+                "ansible_host": "10.100.4.10",
+                "ansible_user": "ansible",
+                "app": "proxmox",
+                "cores": 32,
+                "labels": [
+                    "storage",
+                    "gpu"
+                ],
+                "type": "bare-metal"
+            },
+            "pve-02": {
+                "ansible_host": "10.100.4.11",
+                "ansible_user": "ansible",
+                "app": "proxmox",
+                "cores": 16,
+                "labels": [
+                    "storage"
+                ],
+                "type": "bare-metal"
+            },
+            "rke-cp-01": {
+                "ansible_host": "10.100.5.10",
+                "ansible_user": "ansible",
+                "type": "vm"
+            },
+            "rke-worker-01": {
+                "ansible_host": "10.100.5.20",
+                "ansible_user": "ansible",
+                "rke_role": "worker",
+                "type": "vm"
+            }
+        }
+    }
+}

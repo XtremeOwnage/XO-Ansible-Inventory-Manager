@@ -1,0 +1,4 @@
+# host_criteria may also be a list; a host matching any entry joins the group.
+host_criteria:
+  - cores >= 16 AND type = bare-metal
+  - labels CONTAINS gpu

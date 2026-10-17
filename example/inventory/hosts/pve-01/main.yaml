@@ -1,0 +1,4 @@
+# A host can be a folder: every YAML file inside is merged into host "pve-01".
+ansible_host: 10.100.4.10
+app: proxmox
+type: bare-metal

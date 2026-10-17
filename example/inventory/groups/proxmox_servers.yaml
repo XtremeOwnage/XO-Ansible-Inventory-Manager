@@ -1,0 +1,5 @@
+# Group "proxmox_servers": every host whose app variable is proxmox.
+host_criteria: app = proxmox
+
+ansible_connection: ssh
+ansible_port: 22

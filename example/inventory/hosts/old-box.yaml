@@ -1,0 +1,4 @@
+# enabled: false removes a host from the inventory entirely.
+enabled: false
+ansible_host: 10.100.4.99
+app: proxmox

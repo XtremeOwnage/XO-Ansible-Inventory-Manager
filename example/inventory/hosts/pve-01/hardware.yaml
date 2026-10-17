@@ -1,0 +1,4 @@
+cores: 32
+labels:
+  - storage
+  - gpu

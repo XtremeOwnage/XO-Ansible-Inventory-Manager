@@ -1,0 +1,4 @@
+ansible_host: 10.100.4.50
+app: docker
+type: vm
+cores: 4

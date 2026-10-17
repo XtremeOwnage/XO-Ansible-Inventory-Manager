@@ -1,2 +1,3 @@
-## Any variables inside of this file, will also be applied to all hosts, automatically.
-## This file is optional.
+# hosts/all.yaml is special: its variables are given to every host that does not
+# set them itself (lowest priority). Optional.
+ansible_user: ansible

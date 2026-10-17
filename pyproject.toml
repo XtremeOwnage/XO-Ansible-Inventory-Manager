@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xo-ansible-inventory-manager"
+dynamic = ["version"]
+description = "Dynamic Ansible inventory built from a folder of YAML files, with criteria-based groups."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "XtremeOwnage" }]
+requires-python = ">=3.9"
+dependencies = ["PyYAML>=5.3"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Environment :: Console",
+    "Topic :: System :: Systems Administration",
+]
+
+[project.urls]
+Homepage = "https://github.com/XtremeOwnage/XO-Ansible-Inventory-Manager"
+
+[project.scripts]
+ansible-xo-inventory = "xo_inventory.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "xo_inventory.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py39"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]

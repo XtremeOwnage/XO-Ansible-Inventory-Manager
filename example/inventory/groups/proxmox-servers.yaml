@@ -1,7 +1,0 @@
-# This will create a group named "proxmox-servers", populated from hosts with variable app=proxmox.
-
-# The below variables will be present on this group.
-ansible_connection: ssh
-ansible_port: 22
-
-host_criteria: app=proxmox

@@ -88,6 +88,8 @@ jobs:
           if rpm -qlp dist/*.rpm | grep -E '__pycache__|\.pyc$'; then echo "::error::bytecode in rpm"; exit 1; fi
           rpm -qip dist/*.rpm
           rpm -qlpv dist/*.rpm
+          # Every installed directory must be owned by the package.
+          rpm -qp --qf '[%{FILENAMES} %{FILEMODES:perms}\n]' dist/*.rpm | grep -E '^/usr/lib/xo-ansible-inventory-manager/xo_inventory/criteria d'
           rpm -qp --requires dist/*.rpm
 
       - name: Both packages contain the same files
@@ -163,6 +165,7 @@ jobs:
         if: matrix.format == 'deb'
         run: |
           apt-get remove -y xo-ansible-inventory-manager
+          ls -laR /usr/lib/xo-ansible-inventory-manager 2>/dev/null || true
           test ! -e /usr/bin/ansible-xo-inventory.py
           test ! -e /usr/lib/xo-ansible-inventory-manager
           test -f /etc/ansible/xo_inventory.yaml   # conffile kept until purge
@@ -173,6 +176,9 @@ jobs:
         if: matrix.format == 'rpm'
         run: |
           dnf remove -y xo-ansible-inventory-manager
+          # Show anything left behind before asserting.
+          ls -laR /usr/lib/xo-ansible-inventory-manager /usr/share/doc/xo-ansible-inventory-manager 2>/dev/null || true
           test ! -e /usr/bin/ansible-xo-inventory.py
           test ! -e /usr/lib/xo-ansible-inventory-manager
+          test ! -e /usr/share/doc/xo-ansible-inventory-manager
           test ! -e /etc/ansible/xo_inventory.yaml   # unmodified config is removed

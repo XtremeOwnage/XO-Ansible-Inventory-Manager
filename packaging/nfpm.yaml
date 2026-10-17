@@ -23,9 +23,20 @@ depends:
 recommends:
   - ansible-core
 
+# Directories are listed with type dir / tree so the package owns them and
+# rpm removes them on uninstall.
 contents:
+  - dst: /usr/lib/xo-ansible-inventory-manager
+    type: dir
+  - dst: /usr/share/doc/xo-ansible-inventory-manager
+    type: dir
+  - dst: /usr/share/doc/xo-ansible-inventory-manager/examples
+    type: dir
+  - dst: /usr/share/licenses/xo-ansible-inventory-manager
+    type: dir
   - src: ./src/xo_inventory
     dst: /usr/lib/xo-ansible-inventory-manager/xo_inventory
+    type: tree
   - src: ./src/ansible-xo-inventory.py
     dst: /usr/lib/xo-ansible-inventory-manager/ansible-xo-inventory.py
     file_info:
@@ -42,8 +53,10 @@ contents:
     dst: /usr/share/doc/xo-ansible-inventory-manager/CHANGELOG.md
   - src: ./docs
     dst: /usr/share/doc/xo-ansible-inventory-manager/docs
+    type: tree
   - src: ./example/inventory
     dst: /usr/share/doc/xo-ansible-inventory-manager/examples/inventory
+    type: tree
   - src: ./example/ansible.cfg
     dst: /usr/share/doc/xo-ansible-inventory-manager/examples/ansible.cfg
   - src: ./LICENSE

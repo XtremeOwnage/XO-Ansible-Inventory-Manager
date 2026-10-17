@@ -1,57 +1,56 @@
 # Debugging
 
-## Overview
+## See what Ansible sees
 
-Debugging the Ansible Dynamic Inventory Script can be done by adjusting logging settings and running the script directly to view output messages. This document provides details on how to configure logging and debug effectively.
-
-## Configuring Logging
-
-The logging configuration, including file paths and log formats, can be customized in the plugin configuration file. For more details, refer to the [Logging section](./plugin-configuration.md#logging) in the plugin configuration documentation.
-
-### Adjusting Log Levels
-
-To enable detailed logging for debugging purposes, you can adjust the `MIN_LOG_LEVEL` in the `xo_inventory.yaml` configuration file.
-
-Example configuration:
-```yaml
-logging:
-  MIN_LOG_LEVEL: DEBUG
-```
-
-You can also set the log level to `VERBOSE` for even more detailed output.
-
-### Running the Script Directly
-
-Running the inventory script directly without any arguments will produce log files via standard output (stdout). This can help you evaluate the contents and view debugging messages.
+Run the script directly. Without arguments it pretty-prints the whole inventory:
 
 ```sh
-./inventory.py
+ansible-xo-inventory.py
+ansible-xo-inventory.py --host pve-01          # one host's variables
+ansible-inventory -i /usr/bin/ansible-xo-inventory.py --graph --vars
 ```
 
-## Viewing Log Files
+Use `--config path/to/xo_inventory.yaml` to try a different config without touching the real one.
 
-Log files are generated based on the configuration settings in the `xo_inventory.yaml` file. Ensure that the `LOG_FILE_PATH` and related settings are correctly configured to store log files in the desired location.
+## Errors
 
-Example configuration:
-```yaml
-logging:
-  LOG_FILE_PATH: '/var/log/ansible-inventory-loader.log'
-  ENABLE_FILE_LOGGING: True
-  LOG_FILE_MAX_SIZE: 10485760  # 10 MB
-  LOG_FILE_BACKUP_COUNT: 3
+Problems that would make the inventory wrong stop the build: Ansible reports the inventory as failed rather than running against a partial one. The message names the file:
+
+```
+ansible-xo-inventory: error: /etc/ansible/inventory/groups/web.yaml: invalid YAML: ...
+ansible-xo-inventory: error: .../groups/web.yaml: invalid host_criteria for group 'web': Expected a value after '=', found end of expression
+ansible-xo-inventory: error: STORAGE_LOCATION /etc/ansible/inventory does not exist or is not a folder
+ansible-xo-inventory: error: Group nesting loop: a -> b -> a
 ```
 
-## Example Configuration for Debugging
+Ansible shows these when you add `-vvv`, or you can run the script directly.
 
-Here is an example snippet from the `xo_inventory.yaml` configuration file with debugging enabled:
+## Warnings
+
+Things that are suspicious but not fatal are logged as warnings on stderr:
+
+- A host or group variable set to different values in two files
+- Variables in a `_criteria.yaml` file (only `host_criteria` / `enabled` are read there)
+- Unexpected files in a group folder
+- Unknown or obsolete keys in the config file
+
+## More detail
+
+Set the log level to `DEBUG` to see every file loaded, each group's parsed criteria (with explicit parentheses showing precedence), and how many hosts each criteria matched:
 
 ```yaml
 logging:
   MIN_LOG_LEVEL: DEBUG
-  LOG_FORMAT: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-  LOG_TIMESTAMP_FORMAT: '%Y-%m-%dT%H:%M:%S'
-  ENABLE_FILE_LOGGING: True
-  LOG_FILE_PATH: '/var/log/ansible-inventory-loader.log'
-  LOG_FILE_MAX_SIZE: 10485760  # 10 MB
-  LOG_FILE_BACKUP_COUNT: 3
 ```
+
+To keep a log file as well:
+
+```yaml
+logging:
+  ENABLE_FILE_LOGGING: true
+  LOG_FILE_PATH: ~/.local/state/xo-inventory/inventory.log
+```
+
+## Cache
+
+If caching is enabled and you suspect stale output, run with `--no-cache`, or delete `~/.cache/xo-inventory/inventory.json`. The cache is invalidated automatically when any file under `STORAGE_LOCATION` or the config file changes.

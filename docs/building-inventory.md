@@ -1,189 +1,122 @@
-# Ansible Inventory Structure and Organization
+# Building an inventory
 
-## Overview
-This document provides detailed information about building, structuring, and organizing the Ansible inventory. It explains the directory structure, rules for defining groups and hosts, and how to use folder structures under `groups`.
-
-## Inventory Path
-The inventory path is defined by the `STORAGE_LOCATION` in the plugin's configuration. For more details, refer to the [plugin configuration documentation](./plugin-configuration.md).
-
-## Inventory Directory Structure
-
-The inventory directory may contain three subdirectories: `hosts`, `groups`, and `vars`. Each subdirectory will hold YAML files defining the variables for hosts, groups, and general variables, respectively.
-
-- **`hosts`**: Contains YAML files where each file represents a host. Folders under `hosts` represent a host, and YAML files within the folder represent the host's variables.
-- **`groups`**: Contains YAML files where each file or folder represents a group. You may nest other groups, vars, or hosts folder under the groups folder to define sub-groups, hosts for this group, or vars for this group.
-- **`vars`**: Contains YAML files with variables that will be automatically merged with the `all` group. This allows better organization of vars based on purpose.
-
-## Example Directory Structure
+The inventory lives in the folder named by `STORAGE_LOCATION` in the [configuration](./plugin-configuration.md). A complete working example is in [`example/inventory`](../example/inventory), and its output is in [`tests/golden/example.json`](../tests/golden/example.json).
 
 ```
 inventory/
-├── hosts/                                        # Top-level folder for host variable files
-│   ├── host1.yaml                                # Creates host1 and sets its variables
-│   ├── host2.yaml                                # Creates host2 and sets its variables
-│   ├── new-host/                                 # Folder for the 'new-host' host
-│   │   ├── network-config.yaml                   # Network configuration for 'new-host'
-│   │   ├── security-settings.yaml                # Security settings for 'new-host'
-│   │   └── application-settings.yaml             # Application-specific settings for 'new-host'
-├── groups/                                       # Top-level folder for group variable files and sub-groups
-│   ├── group1.yaml                               # Creates group1 and sets its variables and criteria
-│   ├── group2.yaml                               # Creates group2 and sets its variables and criteria
-│   ├── rke/                                      # Folder for the 'rke' group
-│   │   ├── _criteria.yaml                        # Defines criteria to automatically add hosts to the 'rke' group
-│   │   ├── hosts/                                # Folder for hosts specific to the 'rke' group
-│   │   │   ├── host3.yaml                        # Creates host3 under 'rke' and sets its variables
-│   │   │   └── host4.yaml                        # Creates host4 under 'rke' and sets its variables
-│   │   ├── vars/                                 # Folder for variables specific to the 'rke' group
-│   │   │   ├── network-config.yaml               # Network configuration for 'rke'
-│   │   │   ├── security-settings.yaml            # Security settings for 'rke'
-│   │   │   └── application-settings.yaml         # Application-specific settings for 'rke'
-│   │   └── groups/                               # Folder for child groups under 'rke'
-│   │       ├── child-group1.yaml                 # Creates child-group1 under 'rke' and sets its variables
-│   │       ├── child-group2.yaml                 # Creates child-group2 under 'rke' and sets its variables
-│   │       └── sub-group/                        # Sub-folder for further nesting under 'rke'
-│   │           ├── _criteria.yaml                # Defines criteria to automatically add hosts to the 'sub-group' group
-│   │           ├── hosts/                        # Folder for hosts specific to the sub-group
-│   │           │   ├── host5.yaml                # Creates host5 under the sub-group and sets its variables
-│   │           │   └── host6.yaml                # Creates host6 under the sub-group and sets its variables
-│   │           ├── vars/                         # Folder for variables specific to the sub-group
-│   │           │   ├── more-specific.yaml        # More specific variables for the sub-group
-│   │           │   └── additional.yaml           # Additional variables for the sub-group
-│   │           └── groups/                       # Folder for child groups under the sub-group
-│   │               ├── sub-child-group1.yaml     # Creates sub-child-group1 under the sub-group and sets its variables
-│   │               └── sub-child-group2.yaml     # Creates sub-child-group2 under the sub-group and sets its variables
-│   └── all.yaml                                  # Variables applied to all groups
-├── vars/                                         # Top-level folder for general variables
-│   ├── dns.yaml                                  # DNS-specific variables, merged with groups/all.yaml
-│   └── common.yaml                               # Common variables shared across multiple groups/hosts, merged with groups/all.yaml
+├── hosts/                         Hosts: one file or one folder per host
+│   ├── all.yaml                   Defaults for every host (optional, lowest priority)
+│   ├── pve-01/                    Host "pve-01": all YAML files inside are merged
+│   │   ├── main.yaml
+│   │   └── hardware.yaml
+│   ├── pve-02.yaml                Host "pve-02"
+│   └── nas.example.com.yaml       Host "nas.example.com" (dots are fine)
+├── groups/                        Groups: one file and/or one folder per group
+│   ├── all.yml                    Variables for the "all" group
+│   ├── proxmox_servers.yaml       Group "proxmox_servers": variables + host_criteria
+│   └── rke/                       Group "rke" defined as a folder
+│       ├── _criteria.yaml         host_criteria / enabled for "rke"
+│       ├── hosts/                 Hosts defined here are members of "rke"
+│       │   └── rke-cp-01.yaml
+│       ├── vars/                  Variable files for "rke", merged
+│       │   ├── cluster.yaml
+│       │   └── network.yaml
+│       └── groups/                Child groups of "rke" (same layout as groups/)
+│           ├── rke_control_plane.yaml
+│           └── rke_workers/
+│               ├── _criteria.yaml
+│               └── hosts/
+│                   └── rke-worker-01.yaml
+└── vars/                          Variable files merged into the "all" group
+    ├── common.yaml
+    └── dns.yaml
 ```
 
-## Rules
+Every folder is optional. Files must end in `.yaml` or `.yml` (configurable) and contain `key: value` pairs; an empty or comment-only file is fine. Other files, and files starting with `.`, are ignored.
 
-### Group Rules
+## Hosts
 
-- **Default Nesting**: Any group without a parent will automatically be nested as a child of the `all` group.
-- **Ungrouped Hosts**: Any host that does not belong to any group will be automatically added to a group named `ungrouped`.
-- **Defining Groups**:
-  - **YAML File**: Groups can be defined using a `{group-name}.yaml` file under `groups/`. The name of the file (without the extension) will become the group's name.
-  - **Folder Structure**: Groups can also be defined using a folder structure under `groups/`. The folder's name will be the group's name. Within this folder, you can add `hosts/`, `vars/`, and `groups/` subfolders to add hosts, variables, and child groups respectively.
-
-### Host Rules
-
-- **Merging Variables**: If a host is defined inside multiple groups, all of the variables will be merged together in the resulting inventory. In the case of duplicate variables, the last file loaded wins.
-- **Hosts Definition**: Hosts can be defined in the top-level `hosts/` folder or within `hosts/` subfolders under any group.
-
-### Variable Rules
-
-- **Global Variables**: Variables in `hosts/all.yaml` and `vars/` are automatically merged with `groups/all.yaml` and applied to all hosts and groups.
-- **Specific Variables**: Variables defined within a group's `vars/` folder are applied only to that specific group.
-
-## Host Variables (`hosts`)
-
-Each host's YAML file should define the variables for that host. An example `host1.yaml`:
+A host is either `hosts/<name>.yaml` or a folder `hosts/<name>/`, whose YAML files are merged in alphabetical order. The file or folder name is the host name, minus the extension.
 
 ```yaml
-enabled: true
-ansible_host: 192.168.1.1
-type: webserver
+# hosts/pve-02.yaml
+ansible_host: 10.100.4.11
+app: proxmox
+type: bare-metal
+cores: 16
 ```
 
-A folder within the `hosts` directory will represent a host, and YAML files within the folder will represent the host's variables. Example `new-host/`:
+Hosts can also be defined inside a group's `hosts/` folder, which makes them members of that group. Hosts are global, as in Ansible: if the same host name appears in several places, its variables are merged. A key set to two different values logs a warning, and the file loaded later wins. Files are loaded in path order: `hosts/` first, then `groups/` alphabetically.
 
-```
-inventory/
-└── hosts/
-    └── new-host/
-        ├── network-config.yaml
-        ├── security-settings.yaml
-        └── application-settings.yaml
-```
+### `hosts/all.yaml`
 
-## Group Variables (`groups`)
+Its variables are copied into every host that doesn't set them itself. Turn it off with `MERGE_HOST_ALL_VARS: false`.
 
-Each group's YAML file should define the variables and criteria for that group. An example `group1.yaml`:
+Because they end up as *host* variables, Ansible gives them priority over group variables. For defaults that groups should be able to override, use `groups/all.yaml` or the top-level `vars/` folder instead.
+
+## Groups
+
+A group is `groups/<name>.yaml`, a folder `groups/<name>/`, or both. The YAML file holds the group's variables and, optionally, `host_criteria`:
 
 ```yaml
-enabled: true
-group_criteria: "type=webserver"
-var1: value1
-var2: value2
+# groups/proxmox_servers.yaml
+host_criteria: app = proxmox
+
+ansible_connection: ssh
+ansible_port: 22
 ```
 
-## Vars (`vars`)
+A group folder may contain:
 
-Any variables defined in the `vars` folder will be automatically merged with the `groups/all` group. This can be used to separate variable files to separate functionality. An example `dns.yaml`:
+| Entry | Purpose |
+|---|---|
+| `_criteria.yaml` | `host_criteria` and/or `enabled` for the group. Other keys are ignored with a warning; put variables in `vars/` |
+| `hosts/` | Hosts that belong to the group, same format as the top-level `hosts/` |
+| `vars/` | Variable files for the group, merged in alphabetical order |
+| `groups/` | Child groups, same format as the top-level `groups/`, nested as deep as you like |
 
-```yaml
-dns_servers:
-  - 8.8.8.8
-  - 8.8.4.4
+Anything else in a group folder is ignored with a warning.
+
+A group's members are the hosts in its `hosts/` folder plus every host matching its `host_criteria` (see [criteria expressions](./expression-syntax.md)). Criteria are evaluated against each host's own variables (including `hosts/all.yaml` defaults), not against group variables.
+
+Like hosts, groups are global: the same group name in two places is one group, which is how a group gets several parents. A group may define `host_criteria` in only one place. A group can't contain itself, directly or indirectly; that's reported as a "group nesting loop" error.
+
+Use letters, digits and underscores in group names. Ansible warns about other characters such as `-`.
+
+### Special groups
+
+- **`all`**: `groups/all.yaml` and every file in the top-level `vars/` folder are merged into the `all` group's variables. `host_criteria` is ignored for `all`. Every group without a parent is listed as a child of `all`.
+- **`ungrouped`**: Hosts that are in no group get listed here automatically. You can't define it yourself.
+
+## Turning things off: `enabled: false`
+
+Any host or group can be switched off without deleting it:
+
+| Where | Effect |
+|---|---|
+| `hosts/web1.yaml`, or any file in `hosts/web1/` | Host `web1` is removed from the whole inventory, including groups that list it |
+| `groups/web.yaml`, or `groups/web/_criteria.yaml` | Group `web` is removed, and everything inside `groups/web/` (hosts, child groups) is skipped |
+| A file in a `vars/` folder | Just that file is skipped |
+
+The `enabled` key itself never appears in the output. Its name is configurable (`KEY_ENABLED`).
+
+## Variable precedence
+
+The inventory hands Ansible group variables and host variables separately, and Ansible applies its normal [precedence rules](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html#understanding-variable-precedence): host variables beat group variables, child groups beat parent groups, and every group beats `all`.
+
+Within one host or group, variables from several files are merged:
+
+- Dictionaries are merged key by key, recursively.
+- Lists are combined: items from the later file are appended unless already present.
+- Anything else: the later file wins (with a warning if the values differ).
+
+## Output
+
+Run the script yourself to see what Ansible will see:
+
+```sh
+ansible-xo-inventory.py            # pretty-printed
+ansible-xo-inventory.py --list     # compact, as Ansible calls it
+ansible-xo-inventory.py --host pve-01
+ansible-inventory -i /usr/bin/ansible-xo-inventory.py --graph --vars
 ```
-
-## Special Groups and Hosts
-
-### All Group
-
-- **Purpose**: The `all` group is a special group where variables defined within it are applied to all hosts and groups.
-- **Usage**: Any variables in the `groups/all.yaml` file or in the `vars/` directory are automatically merged into the `all` group, making them globally available to every host and group in the inventory.
-
-### All Host
-
-- **Purpose**: The `all` host is a special host where variables defined within it are merged into every other host, provided the variable was not already defined in that host.
-- **Usage**: The `hosts/all.yaml` file contains variables that are automatically merged with variables from other host files. This ensures that common variables, such as global configuration settings, are consistently applied across all hosts unless overridden.
-
-## Nesting Groups, Hosts, and Variables Using Criteria
-
-This plugin allows dynamically nesting objects using expressions. The expression syntax is detailed in the [expression syntax documentation](./expression-syntax.md).
-
-### Group YAML File
-
-Inside a group's `.yaml` file, the following key is valid:
-
-- **`host_criteria`**: Defines an expression. Any hosts matching this expression will automatically be added to this group.
-
-Example `group1.yaml`:
-
-```yaml
-enabled: true
-host_criteria: "type=webserver"
-var1: value1
-var2: value2
-```
-
-### Group Folder
-
-When using folder structure for creating groups, the `host_criteria` key should be stored in a `_criteria.yaml` file within the group's folder.
-
-Example structure:
-
-```
-inventory/
-└── groups/
-    └── rke/
-        ├── _criteria.yaml                    # Defines the criteria for the 'rke' group
-        └── groups/
-            └── sub-group/
-                └── _criteria.yaml            # Defines the criteria for the 'sub-group'
-```
-
-### Example `_criteria.yaml`
-
-```yaml
-host_criteria: "app=proxmox && type=bare-metal"
-```
-
-## Customization
-
-
-
-### Customizing Folder Names
-
-The folder names (`hosts`, `groups`, and `vars`) can be customized within the plugin configuration. For more details, refer to the [Configuration/Directories](./plugin-configuration.md#directories) in the plugin configuration documentation.
-
-### Customizing File Extensions
-
-The file extensions for the inventory files are also customizable. By default, the inventory supports `.yml` and `.yaml` extensions, but you can configure additional extensions if needed in the [Configuration/Directories Configuration](./plugin-configuration.md#directories). Note- the file's content must still be YAML!
-
-### Customizing Keys
-
-All keys, and special file-names are also customizable in the [Configuration/Keys](./plugin-configuration.md#directories) section of this plugin's configuration documentation.

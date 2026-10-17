@@ -6,7 +6,7 @@ First off, thank you for considering contributing to Ansible Inventory Manager! 
 
 ### Reporting Bugs
 
-If you find a bug in the source code, you can help by submitting an issue to our [GitHub Issue Tracker](https://github.com/your-repo/issues). Even better, you can submit a Pull Request with a fix.
+If you find a bug in the source code, you can help by submitting an issue to our [GitHub Issue Tracker](https://github.com/XtremeOwnage/XO-Ansible-Inventory-Manager/issues). Even better, you can submit a Pull Request with a fix.
 
 ### Suggesting Enhancements
 
@@ -15,7 +15,7 @@ If you have an idea for a new feature or enhancement, please feel free to create
 ### Submitting Pull Requests
 
 1. Fork the repository on GitHub.
-2. Create a new branch from `main` (or the appropriate base branch) for your feature or bug fix.
+2. Create a new branch from `main` for your feature or bug fix.
 3. Ensure your code follows the project's coding standards and passes all tests.
 4. Submit a pull request to the main repository.
 
@@ -28,15 +28,15 @@ If you have an idea for a new feature or enhancement, please feel free to create
 
 ## Running Tests
 
-Before submitting your code, run all tests to ensure everything is working correctly. You can run tests using the following command:
+Before submitting your code, run the linter and the tests (see [docs/testing.md](docs/testing.md)):
 
 ```bash
+pip install -r requirements-dev.txt
+ruff check src tests
 pytest
 ```
 
-## Code of Conduct
-
-By participating in this project, you agree to abide by the [Code of Conduct](CODE_OF_CONDUCT.md).
+If you change the criteria language, update the operator tables in `docs/expression-syntax.md`; a test checks they match the code.
 
 ## License
 

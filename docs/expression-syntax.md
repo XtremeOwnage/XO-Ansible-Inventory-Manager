@@ -1,169 +1,141 @@
-# Expression Language Documentation
+# Criteria expressions
 
-## Overview
+A group can pull hosts in automatically with `host_criteria`:
 
-This documentation provides a comprehensive guide to building expressions using the custom expression language. This language is designed to evaluate criteria against host variables and group variables, making it suitable for use in environments like Ansible for dynamic inventory generation.
+```yaml
+# groups/proxmox_servers.yaml
+host_criteria: app = proxmox AND type = bare-metal
+```
 
-## Table of Contents
+Every host whose variables satisfy the expression becomes a member of the group, in addition to any hosts placed in the group's `hosts/` folder. `host_criteria` can also be a list, in which case a host matching **any** entry joins the group:
 
-1. [Introduction](#introduction)
-2. [Token Types](#token-types)
-3. [Operators](#operators)
-4. [Syntax](#syntax)
-5. [Examples](#examples)
-6. [Evaluation Process](#evaluation-process)
-7. [Debugging](#debugging)
+```yaml
+host_criteria:
+  - cores >= 16 AND type = bare-metal
+  - labels CONTAINS gpu
+```
 
-## Introduction
+Expressions are checked when the inventory is built. An invalid expression stops the build with an error naming the file and pointing at the problem:
 
-Expressions are built using variables, constants, and operators to form logical and comparison statements. These expressions are then evaluated to determine if they meet certain criteria.
-
-## Token Types
-
-Tokens are the basic building blocks of expressions. There are several types of tokens:
-
-- **VARIABLE**: Represents a variable name, e.g., `app`, `type`.
-- **COMPARISON_OPERATOR**: Represents comparison operators, e.g., `=`, `!=`.
-- **UNARY_OPERATOR**: Represents unary operators, e.g., `ISNULL`, `GTZ`.
-- **CONSTANT**: Represents a constant value, e.g., `"proxmox"`, `10`.
-- **LOGICAL_OPERATOR**: Represents logical operators, e.g., `AND`, `OR`.
-- **GROUPING_START**: Represents the start of a grouping, e.g., `(`.
-- **GROUPING_END**: Represents the end of a grouping, e.g., `)`.
-
-## Operators
-
-Operators are used to perform operations on variables and constants. They are divided into comparison and unary operators.
-
-### Comparison Operators
-
-| Operator          | Symbols                       | Description                                  |
-|-------------------|-------------------------------|----------------------------------------------|
-| EQUAL             | `=`, `==`, `EQUALS`           | Checks if two values are equal               |
-| NOT_EQUAL         | `!=`, `NOT`                   | Checks if two values are not equal           |
-| GREATER           | `>`, `GT`                     | Checks if the left value is greater           |
-| GREATER_EQUAL     | `>=`, `GTE`                   | Checks if the left value is greater or equal |
-| LESS              | `<`, `LT`                     | Checks if the left value is less             |
-| LESS_EQUAL        | `<=`, `LTE`                   | Checks if the left value is less or equal    |
-
-### Unary Operators
-
-| Operator          | Symbols                       | Description                                  |
-|-------------------|-------------------------------|----------------------------------------------|
-| NULL              | `ISEMPTY`, `ISNULL`, `IS_EMPTY`, `IS_NULL` | Checks if a value is null                 |
-| NOT_NULL          | `ISNOTEMPTY`, `ISNOTNULL`, `IS_NOT_EMPTY`, `IS_NOT_NULL` | Checks if a value is not null       |
-| GREATER_ZERO      | `GTZ`, `GT0`                  | Checks if a value is greater than zero       |
-| EQUAL_ZERO        | `EQZ`, `EQ0`                  | Checks if a value is equal to zero           |
-| LESS_ZERO         | `LTZ`, `LT0`                  | Checks if a value is less than zero          |
-| NOT_EQUAL_ZERO    | `NEZ`, `NE0`                  | Checks if a value is not equal to zero       |
+```
+ansible-xo-inventory: error: .../groups/web.yaml: invalid host_criteria for group 'web': Expected a value after '=', found end of expression
+  app =
+       ^
+```
 
 ## Syntax
 
-Expressions are built using a combination of variables, constants, and operators. Here are the general rules:
+An expression is one or more **clauses** joined with `AND` / `OR`, optionally negated with `NOT` and grouped with parentheses.
 
-- Variables and constants can be used in comparison operations.
-- Logical operators (`AND`, `OR`) are used to combine multiple conditions.
-- Groupings using parentheses `(` and `)` can be used to control the order of evaluation.
+```
+clause      := variable [NOT] [IS [NOT]] operator [value]
+expression  := clause | NOT expression | ( expression ) | expression AND expression | expression OR expression
+```
 
-### Examples of Valid Expressions
+- **Precedence:** `NOT` binds tightest, then `AND`, then `OR`. `NOT a = 1 AND b = 2` means `(NOT a = 1) AND b = 2`. Use parentheses when in doubt.
+- **Keywords** (`AND`, `like`, `IsNull`, …) are case-insensitive. **Values are case-sensitive.**
+- **Variables** are host variable names. A dotted name such as `net.vlan` first looks for a variable literally called `net.vlan`, then for `vlan` inside a dictionary `net`. List items can be reached by index: `disks.0.size`.
+- **Values** can be unquoted when they only contain letters, digits and `_ - . : / \ * # % @ +` (e.g. `bare-metal`, `10.0.0.5:22`, `http://x/y`). Anything else, such as spaces, `$` or regex syntax like `^` and `[`, needs single or double quotes. Inside quotes, `\"` / `\'` and `\\` are escapes. Every other backslash is kept as-is, so `"^10\.0\.\d+$"` reaches the regex engine unchanged.
+- **Missing variables** behave like `null`: comparisons with them are false (so `x != 5` is true when `x` is not set), and `x IS NULL` is true.
 
-1. `app=proxmox && type=bare-metal`
-2. `app=kubernetes || type=vm`
-3. `(app=proxmox && type=lxc) || ansible_host="10.100.4.100"`
-4. `app!=proxmox`
-5. `ansible_host="10.100.4.100"`
-6. `type ISNULL`
-7. `value GTZ`
+## How values are compared
+
+| Host value | Compared as |
+|---|---|
+| Both sides look like numbers (`16`, `"16"`, `2.5`) | Numbers: `cores >= 8` works with `cores: 16` or `cores: "16"` |
+| `true` / `false` | Matches `true` / `false` in the expression, case-insensitively |
+| Anything else | Text, case-sensitive |
+| A list or dictionary | Only the collection operators (`IN`, `CONTAINS`, `CMATCH`, `CLIKE`) and `ANY` / `EMPTY` / `NULL` look inside it; other comparisons are false |
+
+Version strings are compared as numbers when they look like one, so `"2.10" >= 2.9` is **false** (2.1 < 2.9). Store versions as separate major/minor variables if you need to compare them.
+
+## Operator reference
+
+<!-- operators:start -->
+
+### Logical
+
+| Operator | Spellings | Meaning |
+|---|---|---|
+| `AND` | `AND`, `&&`, `&` | Both sides must be true |
+| `OR` | `OR`, `\|\|`, `\|` | Either side must be true |
+| `NOT` | `NOT`, `!` | Negates what follows: a clause (`NOT app = x`), a group (`NOT (...)`), or, inside a clause, the operator (`app NOT LIKE 'x*'`) |
+
+### Comparison: `variable OPERATOR value`
+
+| Operator | Spellings | Meaning |
+|---|---|---|
+| `EQUAL` | `=`, `==`, `EQ`, `EQUALS` | Equal |
+| `GREATER` | `>`, `GT` | Greater than |
+| `GREATER_EQUAL` | `>=`, `GTE` | Greater than or equal |
+| `LESS` | `<`, `LT` | Less than |
+| `LESS_EQUAL` | `<=`, `LTE` | Less than or equal |
+| `MATCH` | `MATCH`, `REX`, `REGEX` | Matches a [Python regular expression](https://docs.python.org/3/library/re.html) anywhere in the value; anchor with `^`/`$` for a full match |
+| `LIKE` | `LIKE` | Matches a wildcard pattern over the **whole** value; `*` or `%` match any characters |
+
+### Collection: `variable OPERATOR value`
+
+| Operator | Spellings | Meaning |
+|---|---|---|
+| `IN` | `IN` | The value is one of a list: `vlan IN (10, 20, 30)`. If the variable is a list, true when any of its items is in the list. `tags IN web` with a single value is the same as `tags CONTAINS web` |
+| `CONTAINS` | `CONTAINS` | List variable: has an item equal to the value. Text variable: contains the value as a substring. Dictionary: has the value as a key |
+| `CMATCH` | `CMATCH` | Any item of the list matches the regular expression (a non-list value is treated as a one-item list) |
+| `CLIKE` | `CLIKE` | Any item of the list matches the wildcard pattern |
+
+### Unary: `variable OPERATOR`
+
+`IS` may be written before these for readability: `x IS NULL`, `x IS NOT EMPTY`.
+
+| Operator | Spellings | Meaning |
+|---|---|---|
+| `NULL` | `NULL`, `ISNULL`, `IS_NULL`, `NONE` | Not set, or set to `null` |
+| `EMPTY` | `EMPTY`, `ISEMPTY`, `IS_EMPTY` | Null, empty text, empty list or empty dictionary |
+| `ANY` | `ANY` | A list or dictionary with at least one item |
+| `GREATER_ZERO` | `GTZ`, `GT0` | A number greater than 0 (false if not a number) |
+| `EQUAL_ZERO` | `EQZ`, `EQ0` | A number equal to 0 |
+| `LESS_ZERO` | `LTZ`, `LT0` | A number less than 0 |
+| `NOT_EQUAL_ZERO` | `NEZ`, `NE0` | A number other than 0 |
+
+### Negated shorthands
+
+Each of these is the same as `NOT` followed by the operator shown.
+
+| Shorthand | Same as |
+|---|---|
+| `!=`, `<>`, `NE` | `NOT =` |
+| `NOTMATCH` | `NOT MATCH` |
+| `NOTLIKE` | `NOT LIKE` |
+| `NOTIN` | `NOT IN` |
+| `NOTCONTAINS` | `NOT CONTAINS` |
+| `NOMATCH` | `NOT CMATCH` |
+| `NOTNULL`, `ISNOTNULL`, `IS_NOT_NULL` | `NOT NULL` |
+| `NOTEMPTY`, `ISNOTEMPTY`, `IS_NOT_EMPTY` | `NOT EMPTY` |
+
+<!-- operators:end -->
 
 ## Examples
 
-Here are some example expressions and their evaluations:
+| Expression | Hosts it selects |
+|---|---|
+| `app = proxmox` | `app` is exactly `proxmox` |
+| `app = proxmox && type = bare-metal` | Both conditions |
+| `(app = proxmox AND type = lxc) OR ansible_host = "10.100.4.100"` | Grouping |
+| `app != proxmox` | `app` is anything else, **including not set** |
+| `app IS NOT NULL AND app != proxmox` | `app` is set to something other than `proxmox` |
+| `NOT app LIKE 'prox*'` | `app` doesn't start with `prox` |
+| `ansible_host MATCH "^10\.100\.4\.1\d\d$"` | Address in 10.100.4.100–199 |
+| `cores >= 16` | Numeric comparison |
+| `labels CONTAINS gpu` | `labels: [gpu, storage]` |
+| `vlan IN (10, 20)` | `vlan` is 10 or 20 |
+| `labels ANY` | `labels` is a non-empty list |
+| `name = "web 01"` | Values with spaces must be quoted |
+| `net.vlan = 10` | `net: {vlan: 10}` |
+| `monitoring = true` | `monitoring: true` (YAML boolean) |
 
-1. **Expression**: `app=proxmox && type=bare-metal`
-   - **Description**: Checks if the `app` is `proxmox` and `type` is `bare-metal`.
-   - **Evaluation**: True for `host1` with variables `{app: proxmox, type: bare-metal}`.
+## Debugging an expression
 
-2. **Expression**: `(app=proxmox && type=lxc) || ansible_host="10.100.4.100"`
-   - **Description**: Checks if the `app` is `proxmox` and `type` is `lxc`, or if `ansible_host` is `10.100.4.100`.
-   - **Evaluation**: True for `host1` with `ansible_host: 10.100.4.100`.
+Set `MIN_LOG_LEVEL: DEBUG` in the config (or temporarily via a separate config with `--config`) and run the inventory script directly. Each group's parsed expression is logged with explicit parentheses, which shows how precedence was applied:
 
-3. **Expression**: `type ISNULL`
-   - **Description**: Checks if the `type` is null.
-   - **Evaluation**: True if `type` is not defined or is explicitly set to null.
-
-4. **Expression**: `value GTZ`
-   - **Description**: Checks if the `value` is greater than zero.
-   - **Evaluation**: True if `value` is a positive number.
-
-## Evaluation Process
-
-The evaluation process follows these steps:
-
-1. **Tokenization**: The expression is broken down into tokens.
-2. **Shunting Yard Algorithm**: Converts the infix expression to a postfix expression (Reverse Polish Notation).
-3. **Evaluation**: The postfix expression is evaluated using a stack-based approach.
-
-### Tokenization
-
-Tokenization is the process of breaking the expression into tokens. For example, the expression `app=proxmox && type=bare-metal` would be tokenized as:
-
-1. `VARIABLE: app`
-2. `COMPARISON_OPERATOR: =`
-3. `CONSTANT: proxmox`
-4. `LOGICAL_OPERATOR: &&`
-5. `VARIABLE: type`
-6. `COMPARISON_OPERATOR: =`
-7. `CONSTANT: bare-metal`
-
-### Shunting Yard Algorithm
-
-This algorithm converts the infix expression into a postfix expression. For example, `app=proxmox && type=bare-metal` would be converted to:
-
-1. `VARIABLE: app`
-2. `CONSTANT: proxmox`
-3. `COMPARISON_OPERATOR: =`
-4. `VARIABLE: type`
-5. `CONSTANT: bare-metal`
-6. `COMPARISON_OPERATOR: =`
-7. `LOGICAL_OPERATOR: &&`
-
-### Evaluation
-
-The postfix expression is evaluated using a stack-based approach. Each token is processed, and the stack is updated accordingly. For comparison and logical operators, the appropriate values are popped from the stack, the operation is performed, and the result is pushed back onto the stack.
-
-## Debugging
-
-### Global Debugging
-
-To enable or disable debugging globally, use the `DEBUG_ENABLED` flag in the `global_debug_flags.py` file.
-
-### Specific Debugging Flags
-
-- `DEBUG_TOKENIZER`: Enable or disable debugging for the tokenizer.
-- `DEBUG_EVALUATOR`: Enable or disable debugging for the evaluator.
-- `DEBUG_EVALUATOR_CONDITIONS`: Specific debugging for condition evaluations.
-- `DEBUG_EVALUATOR_SHUNTING_YARD`: Debugging for the shunting yard algorithm.
-
-To use these flags, set them to `True` or `False` in the `global_debug_flags.py` file.
-
-```python
-# global_debug_flags.py
-
-# If this is disabled, all debugging will be disabled
-DEBUG_ENABLED = False
-
-# Enable or disable debugging for tokenizer.
-DEBUG_TOKENIZER = False
-
-# Enable or disable debugging for expression evaluator.
-DEBUG_EVALUATOR = True
-
-# Specific debugging for conditions only.
-DEBUG_EVALUATOR_CONDITIONS = True
-
-# The shunting yard algorithm has its own specific debugging.
-DEBUG_EVALUATOR_SHUNTING_YARD = False
 ```
-
-## Conclusion
-
-This document provides all the necessary information to build and evaluate expressions using the custom expression language. Use the provided examples and guidelines to create complex expressions tailored to your specific needs. If you encounter any issues, enable debugging to gain insights into the evaluation process.
+DEBUG loader._set_criteria: Group web criteria: ((NOT app EQUAL 'x' AND type EQUAL 'vm') OR role NULL)
+```

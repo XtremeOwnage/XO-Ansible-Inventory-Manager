@@ -23,10 +23,9 @@ Please describe the tests that you ran to verify your changes. Provide instructi
 - [ ] Test B
 
 **Test Configuration**:
-* Firmware version:
-* Hardware:
-* Toolchain:
-* SDK:
+* Python version:
+* Ansible version:
+* OS:
 
 ## Checklist:
 

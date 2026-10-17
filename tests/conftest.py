@@ -10,6 +10,21 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from xo_inventory.config import parse_config  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def reset_logger():
+    """Undo configure_logging() from earlier tests so caplog sees log records."""
+    import logging
+
+    from xo_inventory.log import logger
+
+    for handler in list(logger.handlers):
+        logger.removeHandler(handler)
+    logger.addHandler(logging.NullHandler())
+    logger.propagate = True
+    logger.setLevel(logging.NOTSET)
+    yield
+
+
 @pytest.fixture
 def inventory_dir(tmp_path):
     """

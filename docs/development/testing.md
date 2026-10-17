@@ -39,7 +39,7 @@ Every push and pull request runs ([`.github/workflows/ci.yml`](https://github.co
 2. The test suite on Python 3.9 to 3.14
 3. Building this documentation site with [Netdocs](https://github.com/XtremeOwnage/Netdocs) in strict mode, so broken links, anchors and orphan pages fail the build
 4. Building the `.deb` (debhelper) and `.rpm` ([nfpm](https://nfpm.goreleaser.com/), from `packaging/nfpm.yaml`), and checking they install the same files
-5. Installing each package on Debian 11–13, Ubuntu 22.04/24.04, Fedora and AlmaLinux 9/10, comparing its output with the golden file, then removing it
+5. Installing each package on Debian 12–13, Ubuntu 22.04/24.04, Fedora and AlmaLinux 9/10, comparing its output with the golden file, then removing it
 
 ## Releasing
 

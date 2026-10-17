@@ -40,7 +40,7 @@ Then:
    or per command: `ansible-playbook -i /usr/bin/ansible-xo-inventory.py site.yml`.
 3. Check it: `ansible-inventory -i /usr/bin/ansible-xo-inventory.py --graph`
 
-Every release is install-tested on Debian 11, 12 and 13, Ubuntu 22.04 and 24.04, Fedora, and AlmaLinux 9 and 10.
+Every release is install-tested on Debian 12 and 13, Ubuntu 22.04 and 24.04, Fedora, and AlmaLinux 9 and 10.
 
 ## From a git checkout
 

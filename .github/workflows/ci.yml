@@ -105,7 +105,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { image: "debian:bullseye", format: deb }
           - { image: "debian:bookworm", format: deb }
           - { image: "debian:trixie", format: deb }
           - { image: "ubuntu:22.04", format: deb }

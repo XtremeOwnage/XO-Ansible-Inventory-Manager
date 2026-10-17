@@ -1,11 +1,18 @@
 #!/usr/bin/make -f
-# -*- makefile -*-
 
 %:
 	dh $@
 
+# Nothing to compile: the package ships plain Python files.
+override_dh_auto_clean override_dh_auto_configure override_dh_auto_build override_dh_auto_install:
+
+# The test suite runs in CI; it needs pytest, which is not a build dependency.
+override_dh_auto_test:
+
 override_dh_install:
 	dh_install
+	find debian/xo-ansible-inventory-manager -type d -name __pycache__ -prune -exec rm -rf {} +
 
 override_dh_fixperms:
 	dh_fixperms
+	chmod 0755 debian/xo-ansible-inventory-manager/usr/lib/xo-ansible-inventory-manager/ansible-xo-inventory.py

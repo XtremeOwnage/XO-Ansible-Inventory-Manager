@@ -3,10 +3,17 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Ignore deb build
-debian/xo-ansible-inventory-manager
-debian/xo-ansible-inventory-manager/*
-debian/xo-ansible-inventory-manager*
+# Debian build output
+debian/xo-ansible-inventory-manager/
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/*.substvars
+debian/*.debhelper
+debian/*.debhelper.log
+/*.deb
+/*.buildinfo
+/*.changes
 
 # C extensions
 *.so

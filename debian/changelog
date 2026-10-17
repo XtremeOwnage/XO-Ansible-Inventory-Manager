@@ -1,6 +1,10 @@
-xo-ansible-inventory-manager (1.0-1) unstable; urgency=low
+xo-ansible-inventory-manager (1.0.0) unstable; urgency=medium
 
-  * Initial release (Closes: #1).
+  * First stable release. See CHANGELOG.md for details.
+  * Rewritten loader, builder and criteria engine; output now matches the
+    Ansible inventory script format (_meta.hostvars).
+  * Config defaults for every setting; only STORAGE_LOCATION is required.
+  * Cache is opt-in, per user, permission-checked and content-invalidated.
+  * Modernised packaging (debhelper 13, /usr/bin link via dh_link).
 
- -- XtremeOwnage <admin@xtremeownage.com>  Mon, 10 Jul 2023 10:00:00 +0000
-
+ -- XtremeOwnage <admin@xtremeownage.com>  Sat, 17 Oct 2026 12:00:00 -0500

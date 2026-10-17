@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check src tests
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
+      - name: Install dependencies
+        # ansible-core is used for the end-to-end test; pip picks the newest release that supports this Python.
+        run: pip install -r requirements-dev.txt
+      - name: Run tests
+        run: pytest -v
+
+  package:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends debhelper dpkg-dev
+
+      - name: Build .deb
+        run: |
+          dpkg-buildpackage -us -uc -b
+          mkdir -p dist
+          mv ../xo-ansible-inventory-manager_*_all.deb dist/
+          ls -l dist
+          dpkg-deb --info dist/*.deb
+          dpkg-deb --contents dist/*.deb
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb
+          path: dist/*.deb
+          if-no-files-found: error
+
+  install-test:
+    runs-on: ubuntu-latest
+    needs: package
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["debian:bullseye", "debian:bookworm", "debian:trixie", "ubuntu:22.04", "ubuntu:24.04"]
+    container: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: deb
+          path: dist
+
+      - name: Install package
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ./dist/*.deb
+          test -L /usr/bin/ansible-xo-inventory.py
+          test -f /etc/ansible/xo_inventory.yaml
+          ansible-xo-inventory.py --version
+
+      - name: Inventory matches the golden output
+        run: |
+          printf 'main:\n  STORAGE_LOCATION: %s/example/inventory\n' "$PWD" > /tmp/xo.yaml
+          XO_INVENTORY_CONFIG=/tmp/xo.yaml ansible-xo-inventory.py --list > /tmp/out.json
+          python3 - <<'EOF'
+          import json
+          actual = json.load(open("/tmp/out.json"))
+          expected = json.load(open("tests/golden/example.json"))
+          assert actual == expected, "installed package output differs from tests/golden/example.json"
+          print("ok:", sorted(actual["_meta"]["hostvars"]))
+          EOF
+
+      - name: Errors exit non-zero
+        run: |
+          if ansible-xo-inventory.py --list --config /nonexistent.yaml; then exit 1; fi
+
+      - name: Remove and purge cleanly
+        run: |
+          apt-get remove -y xo-ansible-inventory-manager
+          test ! -e /usr/bin/ansible-xo-inventory.py
+          test ! -e /usr/lib/xo-ansible-inventory-manager
+          test -f /etc/ansible/xo_inventory.yaml   # conffile kept until purge
+          apt-get purge -y xo-ansible-inventory-manager
+          test ! -e /etc/ansible/xo_inventory.yaml

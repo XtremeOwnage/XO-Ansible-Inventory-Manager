@@ -1,46 +1,53 @@
-name: Build and Release Debian Package
+name: Release
 
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  release:
     runs-on: ubuntu-latest
-
+    needs: ci
+    permissions:
+      contents: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: Install build dependencies
+      - name: Check tag matches the version
         run: |
-          sudo apt-get update
-          sudo apt-get install -y dpkg-dev dh-make devscripts build-essential
+          tag="${GITHUB_REF_NAME#v}"
+          code=$(python3 -c 'import sys; sys.path.insert(0, "src"); import xo_inventory; print(xo_inventory.__version__)')
+          deb=$(dpkg-parsechangelog -S Version)
+          echo "tag=$tag code=$code debian=$deb"
+          test "$tag" = "$code" || { echo "::error::Tag $GITHUB_REF_NAME does not match xo_inventory.__version__ ($code)"; exit 1; }
+          test "$tag" = "$deb" || { echo "::error::Tag $GITHUB_REF_NAME does not match debian/changelog ($deb)"; exit 1; }
 
-      - name: Build Debian package
+      - uses: actions/download-artifact@v4
+        with:
+          name: deb
+          path: dist
+
+      - name: Extract release notes
         run: |
-          chmod +x debian/postinst
-          chmod +x debian/prerm
-          debuild -us -uc -b
+          # The section of CHANGELOG.md for this version, without its heading.
+          awk -v v="${GITHUB_REF_NAME#v}" '
+            /^## / { if (found) exit; if (index($0, "[" v "]")) { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          test -s notes.md || { echo "::error::No CHANGELOG.md section for ${GITHUB_REF_NAME#v}"; exit 1; }
+          cat notes.md
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./ansible-inventory-manager_${GITHUB_REF#refs/tags/v}-1_amd64.deb
-          asset_name: ansible-inventory-manager_${GITHUB_REF#refs/tags/v}-1_amd64.deb
-          asset_content_type: application/x-debian-package
+          name: ${{ github.ref_name }}
+          body_path: notes.md
+          files: dist/*.deb
+          fail_on_unmatched_files: true

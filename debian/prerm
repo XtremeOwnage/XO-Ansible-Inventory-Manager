@@ -1,13 +1,12 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
-# Remove the symlink
-rm -f /usr/bin/ansible-xo-inventory.py
+# Python may have written bytecode caches next to the modules; remove them so
+# the package directory can be removed cleanly.
+if [ "$1" = "remove" ] || [ "$1" = "upgrade" ] || [ "$1" = "deconfigure" ]; then
+    find /usr/lib/xo-ansible-inventory-manager -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
+fi
 
-# Remove logs
-rm -f /var/log/ansible-inventory-loader.log
-
-# Nuke anything left in the lib folder
-rm -rf /usr/lib/xo-ansible-inventory-manager
+#DEBHELPER#
 
 exit 0

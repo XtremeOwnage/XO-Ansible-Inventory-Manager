@@ -1,2 +1,0 @@
-src/lib/* /usr/share/ansible-inventory-manager/
-config/ansible_inventory_loader.yaml /etc/ansible/

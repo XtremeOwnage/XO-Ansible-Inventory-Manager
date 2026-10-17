@@ -16,7 +16,7 @@ Use `--config path/to/xo_inventory.yaml` to try a different config without touch
 
 Problems that would make the inventory wrong stop the build: Ansible reports the inventory as failed rather than running against a partial one. The message names the file:
 
-```
+```text
 ansible-xo-inventory: error: /etc/ansible/inventory/groups/web.yaml: invalid YAML: ...
 ansible-xo-inventory: error: .../groups/web.yaml: invalid host_criteria for group 'web': Expected a value after '=', found end of expression
 ansible-xo-inventory: error: STORAGE_LOCATION /etc/ansible/inventory does not exist or is not a folder

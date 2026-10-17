@@ -17,7 +17,7 @@ host_criteria:
 
 Expressions are checked when the inventory is built. An invalid expression stops the build with an error naming the file and pointing at the problem:
 
-```
+```text
 ansible-xo-inventory: error: .../groups/web.yaml: invalid host_criteria for group 'web': Expected a value after '=', found end of expression
   app =
        ^
@@ -27,14 +27,14 @@ ansible-xo-inventory: error: .../groups/web.yaml: invalid host_criteria for grou
 
 An expression is one or more **clauses** joined with `AND` / `OR`, optionally negated with `NOT` and grouped with parentheses.
 
-```
+```text
 clause      := variable [NOT] [IS [NOT]] operator [value]
 expression  := clause | NOT expression | ( expression ) | expression AND expression | expression OR expression
 ```
 
 - **Precedence:** `NOT` binds tightest, then `AND`, then `OR`. `NOT a = 1 AND b = 2` means `(NOT a = 1) AND b = 2`. Use parentheses when in doubt.
 - **Keywords** (`AND`, `like`, `IsNull`, …) are case-insensitive. **Values are case-sensitive.**
-- **Variables** are host variable names. A dotted name such as `net.vlan` first looks for a variable literally called `net.vlan`, then for `vlan` inside a dictionary `net`. List items can be reached by index: `disks.0.size`.
+- **Variables** are host variable names, plus `inventory_hostname` (the host's name, unless the host sets a variable with that name itself). A dotted name such as `net.vlan` first looks for a variable literally called `net.vlan`, then for `vlan` inside a dictionary `net`. List items can be reached by index: `disks.0.size`.
 - **Values** can be unquoted when they only contain letters, digits and `_ - . : / \ * # % @ +` (e.g. `bare-metal`, `10.0.0.5:22`, `http://x/y`). Anything else, such as spaces, `$` or regex syntax like `^` and `[`, needs single or double quotes. Inside quotes, `\"` / `\'` and `\\` are escapes. Every other backslash is kept as-is, so `"^10\.0\.\d+$"` reaches the regex engine unchanged.
 - **Missing variables** behave like `null`: comparisons with them are false (so `x != 5` is true when `x` is not set), and `x IS NULL` is true.
 
@@ -131,11 +131,12 @@ Each of these is the same as `NOT` followed by the operator shown.
 | `name = "web 01"` | Values with spaces must be quoted |
 | `net.vlan = 10` | `net: {vlan: 10}` |
 | `monitoring = true` | `monitoring: true` (YAML boolean) |
+| `inventory_hostname LIKE 'web-*'` | Hosts whose name starts with `web-` |
 
 ## Debugging an expression
 
 Set `MIN_LOG_LEVEL: DEBUG` in the config (or temporarily via a separate config with `--config`) and run the inventory script directly. Each group's parsed expression is logged with explicit parentheses, which shows how precedence was applied:
 
-```
+```text
 DEBUG loader._set_criteria: Group web criteria: ((NOT app EQUAL 'x' AND type EQUAL 'vm') OR role NULL)
 ```

@@ -1,0 +1,104 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Warning",
+      "Netdocs": "Information",
+      "Microsoft": "Warning"
+    }
+  },
+  "Netdocs": {
+    "siteName": "XO Ansible Inventory Manager",
+    "siteAuthor": "XtremeOwnage",
+    "siteUrl": "https://xtremeownage.github.io/XO-Ansible-Inventory-Manager/",
+    "siteDescription": "A dynamic Ansible inventory built from a folder of YAML files, with criteria-based groups.",
+    "copyright": "XO Ansible Inventory Manager is licensed under GPL-3.0. Site built with Netdocs.",
+    "repoUrl": "https://github.com/XtremeOwnage/XO-Ansible-Inventory-Manager",
+    "repoName": "XtremeOwnage/XO-Ansible-Inventory-Manager",
+    "editUri": "edit/main/docs/",
+    "docsDir": "docs",
+    "siteDir": "_site",
+
+    "theme": {
+      "name": "material",
+      "language": "en",
+      "font": { "text": "Roboto", "code": "Roboto Mono" },
+      "palette": [
+        { "scheme": "slate", "primary": "deep purple", "accent": "amber", "toggle": { "icon": "material/brightness-4", "name": "Switch to light mode" } },
+        { "scheme": "default", "primary": "deep purple", "accent": "amber", "toggle": { "icon": "material/brightness-7", "name": "Switch to dark mode" } }
+      ],
+      "features": [
+        "navigation.tabs",
+        "navigation.sections",
+        "navigation.top",
+        "navigation.footer",
+        "navigation.indexes",
+        "search.suggest",
+        "search.highlight",
+        "content.code.copy",
+        "content.action.edit",
+        "content.tabs.link",
+        "toc.follow"
+      ]
+    },
+
+    "nav": [
+      { "title": "Home", "path": "index.md", "icon": "home" },
+      {
+        "title": "Getting started",
+        "icon": "rocket-launch",
+        "children": [
+          { "path": "getting-started/installation.md" },
+          { "path": "getting-started/quickstart.md" }
+        ]
+      },
+      {
+        "title": "Guide",
+        "icon": "book-open-variant",
+        "children": [
+          { "path": "guide/inventory-layout.md" },
+          { "path": "guide/criteria.md" },
+          { "path": "guide/configuration.md" },
+          { "path": "guide/debugging.md" }
+        ]
+      },
+      {
+        "title": "Examples",
+        "icon": "lightbulb-on-outline",
+        "children": [
+          { "path": "examples/index.md" },
+          { "path": "examples/recipes.md" }
+        ]
+      },
+      {
+        "title": "Development",
+        "icon": "cog-outline",
+        "children": [
+          { "path": "development/testing.md" },
+          { "path": "about/changelog.md" }
+        ]
+      }
+    ],
+
+    "plugins": [
+      { "name": "search", "options": { "lang": "en" } },
+      { "name": "snippets", "options": { "base_path": [ "." ] } }
+    ],
+
+    "validation": { "links": true, "anchors": true, "orphanPages": true },
+
+    "markdownExtensions": [
+      { "name": "admonition" },
+      { "name": "pymdownx.details" },
+      { "name": "attr_list" },
+      { "name": "toc", "options": { "permalink": true } },
+      { "name": "pymdownx.tabbed", "options": { "alternate_style": true } },
+      { "name": "pymdownx.superfences" }
+    ],
+
+    "extra": {
+      "social": [
+        { "icon": "fontawesome/brands/github", "link": "https://github.com/XtremeOwnage/XO-Ansible-Inventory-Manager" }
+      ]
+    }
+  }
+}

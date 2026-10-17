@@ -1,6 +1,6 @@
 # Configuration
 
-All settings live in `xo_inventory.yaml`. Only `main.STORAGE_LOCATION` is required; everything else has a default. The [example config](../example/xo_inventory.yaml) lists every setting with its default value and a comment.
+All settings live in `xo_inventory.yaml`. Only `main.STORAGE_LOCATION` is required; everything else has a default. The [example config](https://github.com/XtremeOwnage/XO-Ansible-Inventory-Manager/blob/main/example/xo_inventory.yaml) lists every setting with its default value and a comment.
 
 ## Where the config file is found
 
@@ -52,7 +52,7 @@ Log messages go to **stderr** (stdout carries the JSON for Ansible), and optiona
 
 | Key | Default | Description |
 |---|---|---|
-| `HOST_CRITERIA_VAR` | `host_criteria` | Group variable holding the [criteria expression](./expression-syntax.md) |
+| `HOST_CRITERIA_VAR` | `host_criteria` | Group variable holding the [criteria expression](criteria.md) |
 | `KEY_ENABLED` | `enabled` | Set to `false` to leave a host, group or vars file out |
 | `GROUP_CRITERIA_FILE` | `_criteria.yaml` | File in a group folder holding its criteria / enabled flag |
 
@@ -91,7 +91,7 @@ The cache is rebuilt whenever the config file, or the name, size or modification
 
 Cached variables are handed to Ansible, and some (like `ansible_ssh_common_args`) can run commands. So the cache is written with `0600` permissions and only read back if it's a regular file (not a symlink) owned by the current user and not writable by anyone else.
 
-## Settings from before 1.0
+## Legacy settings
 
 These are accepted so old config files keep working, but they have no effect and log a warning:
 

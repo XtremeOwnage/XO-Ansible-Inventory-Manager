@@ -1,8 +1,8 @@
 # Building an inventory
 
-The inventory lives in the folder named by `STORAGE_LOCATION` in the [configuration](./plugin-configuration.md). A complete working example is in [`example/inventory`](../example/inventory), and its output is in [`tests/golden/example.json`](../tests/golden/example.json).
+The inventory lives in the folder named by `STORAGE_LOCATION` in the [configuration](configuration.md). A complete working example is in [`example/inventory`](https://github.com/XtremeOwnage/XO-Ansible-Inventory-Manager/tree/main/example/inventory), and its output is in [`tests/golden/example.json`](https://github.com/XtremeOwnage/XO-Ansible-Inventory-Manager/blob/main/tests/golden/example.json).
 
-```
+```text
 inventory/
 ├── hosts/                         Hosts: one file or one folder per host
 │   ├── all.yaml                   Defaults for every host (optional, lowest priority)
@@ -77,7 +77,7 @@ A group folder may contain:
 
 Anything else in a group folder is ignored with a warning.
 
-A group's members are the hosts in its `hosts/` folder plus every host matching its `host_criteria` (see [criteria expressions](./expression-syntax.md)). Criteria are evaluated against each host's own variables (including `hosts/all.yaml` defaults), not against group variables.
+A group's members are the hosts in its `hosts/` folder plus every host matching its `host_criteria` (see [criteria expressions](criteria.md)). Criteria are evaluated against each host's own variables (including `hosts/all.yaml` defaults), not against group variables.
 
 Like hosts, groups are global: the same group name in two places is one group, which is how a group gets several parents. A group may define `host_criteria` in only one place. A group can't contain itself, directly or indirectly; that's reported as a "group nesting loop" error.
 
@@ -87,6 +87,18 @@ Use letters, digits and underscores in group names. Ansible warns about other ch
 
 - **`all`**: `groups/all.yaml` and every file in the top-level `vars/` folder are merged into the `all` group's variables. `host_criteria` is ignored for `all`. Every group without a parent is listed as a child of `all`.
 - **`ungrouped`**: Hosts that are in no group get listed here automatically. You can't define it yourself.
+
+## Vault-encrypted values
+
+Inline [Ansible Vault](https://docs.ansible.com/ansible/latest/vault_guide/index.html) values work in any host, group or vars file:
+
+```yaml
+db_password: !vault |
+  $ANSIBLE_VAULT;1.1;AES256
+  6236326531...
+```
+
+They're handed to Ansible still encrypted and decrypted by Ansible as usual (`--vault-password-file`, `--ask-vault-pass`, …). The `!unsafe` tag is passed through the same way. Whole files encrypted with `ansible-vault encrypt` aren't supported; use inline values (`ansible-vault encrypt_string`). Criteria can't look inside encrypted values.
 
 ## Turning things off: `enabled: false`
 

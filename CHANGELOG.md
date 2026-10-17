@@ -11,11 +11,14 @@ First stable release. The pre-1.0 development code was largely rewritten.
 - Folder-based inventory layout: `hosts/` (file or folder per host), `groups/` (file and/or folder per group, with `_criteria.yaml`, `hosts/`, `vars/` and nested `groups/`), and top-level `vars/` merged into `all`.
 - `host_criteria` may be a list; a host matching any entry joins the group.
 - Criteria operators: `IN (a, b, c)` lists, `CONTAINS`, `CLIKE`, `EMPTY`, `NEZ`, `IS NULL` / `IS NOT NULL`, `NOTLIKE`, `NOTCONTAINS`, `<>`, and `!` as `NOT`.
-- Dotted variable names in criteria (`net.vlan`, `disks.0.size`).
+- Dotted variable names in criteria (`net.vlan`, `disks.0.size`), and `inventory_hostname` for matching on host names.
+- Inline Ansible Vault (`!vault`) and `!unsafe` values are passed through to Ansible, which decrypts them as usual.
 - `--config`, `--no-cache`, `--pretty` and `--version` options; `XO_INVENTORY_CONFIG` environment variable; `~/.config/xo-inventory/xo_inventory.yaml` config location.
 - Warnings for conflicting variable definitions, stray files in group folders, and unknown config keys.
-- Test suite (Python 3.9–3.14) with an end-to-end check against `ansible-inventory`, and CI that installs the `.deb` on Debian 11–13 and Ubuntu 22.04/24.04.
+- Test suite (Python 3.9–3.14) with end-to-end checks against `ansible-inventory` and `ansible-playbook`. CI installs both packages on Debian 11–13, Ubuntu 22.04/24.04, Fedora and AlmaLinux 9/10, and builds the docs in strict mode.
 - `pyproject.toml`, so the tool can also be installed with pip/pipx.
+- RPM package for Fedora / RHEL / AlmaLinux / Rocky, alongside the `.deb`. Releases include SHA-256 checksums.
+- Documentation site built with [Netdocs](https://github.com/XtremeOwnage/Netdocs): quick start, homelab example (embedding the real example files and output) and recipes.
 
 ### Changed
 
